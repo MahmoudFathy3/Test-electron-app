@@ -1,19 +1,26 @@
 import { createHashRouter } from "react-router-dom";
-import Home from "../../features/Home/Home";
-import About from "../../features/About/About";
-import Splash from "../../splash";
+import MainLayout from "@/components/layouts/MainLayout/MainLayout";
+import Splash from "@/splash";
+import homeRoutes from "@/features/Home/routes";
+import aboutRoutes from "@/features/About/routes";
+import ErrorPage from "../Error/ErrorPage";
+import AuthLayout from "@/components/layouts/AuthLayout/AuthLayout";
+import authRoutes from "@/features/Auth/routes";
 
 export const router = createHashRouter([
   {
-    path: "/",
-    element: <Home />,
-  },
-  {
-    path: "/about",
-    element: <About />,
-  },
-  {
     path: "/splash",
     element: <Splash />,
+  },
+  {
+    path: "/login",
+    element: <AuthLayout />,
+    children: [...authRoutes],
+  },
+  {
+    path: "/",
+    element: <MainLayout />,
+    errorElement: <ErrorPage />,
+    children: [...homeRoutes, ...aboutRoutes],
   },
 ]);

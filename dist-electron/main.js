@@ -1,74 +1,99 @@
-import { screen as u, BrowserWindow as p, app as i } from "electron";
-import { fileURLToPath as R } from "node:url";
-import e from "node:path";
-function w(l, a, c) {
-  const { width: h, height: t } = u.getPrimaryDisplay().workAreaSize, d = new p({
-    width: Math.floor(h * 0.9),
-    height: Math.floor(t * 0.9),
-    autoHideMenuBar: !0,
-    icon: a,
-    show: !1,
+import { screen, BrowserWindow, app } from "electron";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+function createMainWindow(preload, icon, startUrl) {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const win = new BrowserWindow({
+    width: Math.floor(width * 0.9),
+    height: Math.floor(height * 0.9),
+    autoHideMenuBar: true,
+    icon,
+    show: false,
     webPreferences: {
-      preload: l
+      preload
     }
   });
-  return d.loadURL(c), d;
+  win.loadURL(startUrl);
+  return win;
 }
-function _(l, a) {
-  const { width: c, height: h } = u.getPrimaryDisplay().workAreaSize, t = new p({
-    width: Math.floor(c * 0.9),
-    height: Math.floor(h * 0.9),
-    frame: !1,
-    resizable: !1,
-    maximizable: !1,
-    minimizable: !1,
-    center: !0,
-    alwaysOnTop: !0,
-    autoHideMenuBar: !0,
-    show: !1,
+function createSplashWindow(preload, startUrl) {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const splash = new BrowserWindow({
+    width: Math.floor(width * 0.9),
+    height: Math.floor(height * 0.9),
+    frame: false,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    center: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    show: false,
     webPreferences: {
-      preload: l
+      preload
     }
   });
-  return t.loadURL(a), t;
+  splash.loadURL(startUrl);
+  return splash;
 }
-const s = e.dirname(R(import.meta.url));
-process.env.APP_ROOT = e.join(s, "..");
-const r = process.env.VITE_DEV_SERVER_URL, g = e.join(process.env.APP_ROOT, "dist-electron"), f = e.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = r ? e.join(process.env.APP_ROOT, "public") : f;
-let o = null, n = null;
-function m() {
-  return r ? `${r}#/` : `file://${e.join(f, "index.html")}`;
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let mainWindow = null;
+let splashWindow = null;
+function getMainUrl() {
+  if (VITE_DEV_SERVER_URL) {
+    return `${VITE_DEV_SERVER_URL}#/`;
+  }
+  return `file://${path.join(RENDERER_DIST, "index.html")}`;
 }
-function P() {
-  return r ? `${r}#/splash` : `file://${e.join(f, "index.html")}#/splash`;
+function getSplashUrl() {
+  if (VITE_DEV_SERVER_URL) {
+    return `${VITE_DEV_SERVER_URL}#/splash`;
+  }
+  return `file://${path.join(RENDERER_DIST, "index.html")}#/splash`;
 }
-i.whenReady().then(() => {
-  n = _(
-    e.join(s, "preload.mjs"),
-    P()
-  ), n.show(), setTimeout(() => {
-    o = w(
-      e.join(s, "preload.mjs"),
-      e.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-      m()
-    ), o.once("ready-to-show", () => {
-      console.log("Main Loaded"), o == null || o.show(), n == null || n.close();
+app.whenReady().then(() => {
+  splashWindow = createSplashWindow(
+    path.join(__dirname$1, "preload.mjs"),
+    getSplashUrl()
+  );
+  splashWindow.show();
+  setTimeout(() => {
+    mainWindow = createMainWindow(
+      path.join(__dirname$1, "preload.mjs"),
+      path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+      getMainUrl()
+    );
+    mainWindow.once("ready-to-show", () => {
+      console.log("Main Loaded");
+      mainWindow == null ? void 0 : mainWindow.show();
+      splashWindow == null ? void 0 : splashWindow.close();
     });
   }, 3e3);
 });
-i.on("activate", () => {
-  p.getAllWindows().length === 0 && (o = w(
-    e.join(s, "preload.mjs"),
-    e.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-    m()
-  ), o.show());
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    mainWindow = createMainWindow(
+      path.join(__dirname$1, "preload.mjs"),
+      path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+      getMainUrl()
+    );
+    mainWindow.show();
+  }
 });
-i.on("window-all-closed", () => {
-  process.platform !== "darwin" && (i.quit(), o = null, n = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    mainWindow = null;
+    splashWindow = null;
+  }
 });
 export {
-  g as MAIN_DIST,
-  f as RENDERER_DIST,
-  r as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
